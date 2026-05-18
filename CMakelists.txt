@@ -48,6 +48,7 @@ set(EXERCISES
     TriangleTex
     SpherePhong
     Vivencial
+    Texturas
 )
 
 add_compile_options(-Wno-pragmas)
