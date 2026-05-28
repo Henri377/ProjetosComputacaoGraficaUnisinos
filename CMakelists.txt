@@ -49,6 +49,7 @@ set(EXERCISES
     SpherePhong
     Vivencial
     Texturas
+    PhongTexturas
 )
 
 add_compile_options(-Wno-pragmas)
