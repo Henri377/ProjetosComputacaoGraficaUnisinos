@@ -82,20 +82,167 @@ void main()
 
 bool rotateX = false, rotateY = false, rotateZ = false;
 
-// Variaveis globais da camera
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 5.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
-
-bool firstMouse = true;
-float lastX = WIDTH / 2.0f;
-float lastY = HEIGHT / 2.0f;
-float yaw = -90.0f;
-float pitch = 0.0f;
-float fov = 45.0f;
-
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
+/** Encapsula estado e comportamento da camera livre. */
+class Camera
+{
+public:
+    Camera()
+        : position(0.0f, 0.0f, 5.0f), front(0.0f, 0.0f, -1.0f), up(0.0f, 1.0f, 0.0f),
+          yaw(-90.0f), pitch(0.0f), fov(45.0f), firstMouse(true),
+          lastX(WIDTH / 2.0f), lastY(HEIGHT / 2.0f), speed(2.5f), sensitivity(0.05f)
+    {}
+
+    /** Move camera com teclas WASD. */
+    void ProcessKeyboard(GLFWwindow *window, float dt)
+    {
+        float cameraSpeed = speed * dt;
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            position += cameraSpeed * front;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            position -= cameraSpeed * front;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            position -= glm::normalize(glm::cross(front, up)) * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            position += glm::normalize(glm::cross(front, up)) * cameraSpeed;
+    }
+
+    /** Atualiza orientacao da camera com movimento do mouse. */
+    void ProcessMouseMovement(double xpos, double ypos)
+    {
+        if (firstMouse)
+        {
+            lastX = static_cast<float>(xpos);
+            lastY = static_cast<float>(ypos);
+            firstMouse = false;
+        }
+
+        float xoffset = static_cast<float>(xpos) - lastX;
+        float yoffset = lastY - static_cast<float>(ypos);
+        lastX = static_cast<float>(xpos);
+        lastY = static_cast<float>(ypos);
+
+        xoffset *= sensitivity;
+        yoffset *= sensitivity;
+
+        yaw += xoffset;
+        pitch += yoffset;
+
+        if (pitch > 89.0f)
+            pitch = 89.0f;
+        if (pitch < -89.0f)
+            pitch = -89.0f;
+
+        glm::vec3 newFront;
+        newFront.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        newFront.y = sin(glm::radians(pitch));
+        newFront.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+        front = glm::normalize(newFront);
+
+        glm::vec3 right = glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f)));
+        up = glm::normalize(glm::cross(right, front));
+    }
+
+    /** Ajusta FOV com scroll no intervalo [1, 45]. */
+    void ProcessMouseScroll(double yoffset)
+    {
+        if (fov >= 1.0f && fov <= 45.0f)
+            fov -= static_cast<float>(yoffset);
+        if (fov <= 1.0f)
+            fov = 1.0f;
+        if (fov >= 45.0f)
+            fov = 45.0f;
+    }
+
+    /** Gera matriz view com base no estado atual. */
+    glm::mat4 GetViewMatrix() const
+    {
+        return glm::lookAt(position, position + front, up);
+    }
+
+    /** Gera matriz de projecao em perspectiva. */
+    glm::mat4 GetProjectionMatrix(float aspect) const
+    {
+        return glm::perspective(glm::radians(fov), aspect, 0.1f, 100.0f);
+    }
+
+    /** Retorna posicao atual da camera. */
+    const glm::vec3 &GetPosition() const { return position; }
+
+private:
+    glm::vec3 position;
+    glm::vec3 front;
+    glm::vec3 up;
+    float yaw;
+    float pitch;
+    float fov;
+    bool firstMouse;
+    float lastX;
+    float lastY;
+    float speed;
+    float sensitivity;
+};
+
+/** Encapsula carga, bind e liberacao de textura OpenGL 2D. */
+class Texture2D
+{
+public:
+    /** Carrega textura 2D de arquivo com stb_image. */
+    bool LoadFromFile(const string &filePath)
+    {
+        Release();
+
+        glGenTextures(1, &id);
+        glBindTexture(GL_TEXTURE_2D, id);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        int nrChannels = 0;
+        unsigned char *data = stbi_load(filePath.c_str(), &width, &height, &nrChannels, 0);
+        if (!data)
+        {
+            cerr << "Falha ao carregar textura: " << filePath << endl;
+            Release();
+            return false;
+        }
+
+        GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        stbi_image_free(data);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        return true;
+    }
+
+    /** Associa a textura na unidade informada. */
+    void Bind(GLenum unit = GL_TEXTURE0) const
+    {
+        glActiveTexture(unit);
+        glBindTexture(GL_TEXTURE_2D, id);
+    }
+
+    /** Libera recurso OpenGL da textura. */
+    void Release()
+    {
+        if (id != 0)
+        {
+            glDeleteTextures(1, &id);
+            id = 0;
+        }
+    }
+
+private:
+    GLuint id = 0;
+    int width = 0;
+    int height = 0;
+};
+
+Camera gCamera;
 
 struct Material
 {
@@ -109,7 +256,7 @@ struct Material
 struct Mesh
 {
     GLuint VAO = 0;
-    GLuint textureID = 0;
+    Texture2D texture;
     int nVertices = 0;
     glm::vec3 position{0.0f};
     glm::vec3 scale{1.0f};
@@ -132,7 +279,7 @@ const float TRANSLATE_STEP = 0.1f;
 /** Processa teclas de transformacao da malha selecionada. */
 void handleMeshTransformKeys(Mesh &active, int key, int action);
 /** Atualiza apenas os uniforms relacionados a camera (view/projection/pos). */
-void updateCameraUniforms(GLuint shaderID, GLint viewLoc, GLint projLoc);
+void updateCameraUniforms(GLFWwindow *window, GLuint shaderID, GLint viewLoc, GLint projLoc);
 /** Aplica rotacao automatica (X/Y/Z) na malha selecionada. */
 void updateActiveMeshRotation();
 
@@ -341,34 +488,6 @@ bool loadTexturedOBJ(const string &objPath, GLuint &outVAO, int &nVertices, Mate
     return true;
 }
 
-GLuint loadTexture(const string &filePath, int &width, int &height)
-{
-    GLuint texID = 0;
-    glGenTextures(1, &texID);
-    glBindTexture(GL_TEXTURE_2D, texID);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    int nrChannels = 0;
-    unsigned char *data = stbi_load(filePath.c_str(), &width, &height, &nrChannels, 0);
-    if (!data)
-    {
-        cerr << "Falha ao carregar textura: " << filePath << endl;
-        glDeleteTextures(1, &texID);
-        return 0;
-    }
-
-    GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    stbi_image_free(data);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    return texID;
-}
-
 bool loadMesh(Mesh &mesh, const string &objPath)
 {
     Material mat;
@@ -384,9 +503,7 @@ bool loadMesh(Mesh &mesh, const string &objPath)
     if (texturePath.empty())
         texturePath = "../assets/tex/pixelWall.png";
 
-    int w = 0, h = 0;
-    mesh.textureID = loadTexture(texturePath, w, h);
-    return mesh.textureID != 0;
+    return mesh.texture.LoadFromFile(texturePath);
 }
 
 int main()
@@ -464,8 +581,7 @@ int main()
         glUniform1f(ksLoc, mesh.ks);
         glUniform1f(qLoc,  mesh.q);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, mesh.textureID);
+        mesh.texture.Bind(GL_TEXTURE0);
         glBindVertexArray(mesh.VAO);
         glDrawArrays(GL_TRIANGLES, 0, mesh.nVertices);
         glBindVertexArray(0);
@@ -484,7 +600,7 @@ int main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        updateCameraUniforms(shaderID, viewLoc, projLoc);
+        updateCameraUniforms(window, shaderID, viewLoc, projLoc);
         updateActiveMeshRotation();
 
         drawMesh(suzanne);
@@ -495,8 +611,8 @@ int main()
 
     glDeleteVertexArrays(1, &suzanne.VAO);
     glDeleteVertexArrays(1, &cube.VAO);
-    glDeleteTextures(1, &suzanne.textureID);
-    glDeleteTextures(1, &cube.textureID);
+    suzanne.texture.Release();
+    cube.texture.Release();
     glfwTerminate();
     return 0;
 }
@@ -507,54 +623,14 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
 
-    float cameraSpeed = 2.5f * deltaTime;
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += cameraSpeed * cameraFront;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= cameraSpeed * cameraFront;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    gCamera.ProcessKeyboard(window, deltaTime);
 }
 
 /** Converte movimento do mouse em yaw/pitch e atualiza eixos da camera. */
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 {
     (void)window;
-
-    if (firstMouse)
-    {
-        lastX = static_cast<float>(xpos);
-        lastY = static_cast<float>(ypos);
-        firstMouse = false;
-    }
-
-    float xoffset = static_cast<float>(xpos) - lastX;
-    float yoffset = lastY - static_cast<float>(ypos);
-    lastX = static_cast<float>(xpos);
-    lastY = static_cast<float>(ypos);
-
-    float sensitivity = 0.05f;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
-    if (pitch > 89.0f)
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
-
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(front);
-
-    glm::vec3 right = glm::normalize(glm::cross(cameraFront, glm::vec3(0.0f, 1.0f, 0.0f)));
-    cameraUp = glm::normalize(glm::cross(right, cameraFront));
+    gCamera.ProcessMouseMovement(xpos, ypos);
 }
 
 /** Atualiza campo de visao (zoom) no intervalo [1, 45]. */
@@ -562,29 +638,23 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 {
     (void)window;
     (void)xoffset;
-
-    if (fov >= 1.0f && fov <= 45.0f)
-        fov -= static_cast<float>(yoffset);
-    if (fov <= 1.0f)
-        fov = 1.0f;
-    if (fov >= 45.0f)
-        fov = 45.0f;
+    gCamera.ProcessMouseScroll(yoffset);
 }
 
 /** Atualiza uniforms de view/projection/cameraPos a cada frame. */
-void updateCameraUniforms(GLuint shaderID, GLint viewLoc, GLint projLoc)
+void updateCameraUniforms(GLFWwindow *window, GLuint shaderID, GLint viewLoc, GLint projLoc)
 {
-    glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+    glm::mat4 view = gCamera.GetViewMatrix();
 
     int fbWidth = 0;
     int fbHeight = 0;
-    glfwGetFramebufferSize(glfwGetCurrentContext(), &fbWidth, &fbHeight);
+    glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
     float aspect = (fbHeight > 0) ? (static_cast<float>(fbWidth) / static_cast<float>(fbHeight)) : 1.0f;
-    glm::mat4 projection = glm::perspective(glm::radians(fov), aspect, 0.1f, 100.0f);
+    glm::mat4 projection = gCamera.GetProjectionMatrix(aspect);
 
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-    glUniform3fv(glGetUniformLocation(shaderID, "cameraPos"), 1, glm::value_ptr(cameraPos));
+    glUniform3fv(glGetUniformLocation(shaderID, "cameraPos"), 1, glm::value_ptr(gCamera.GetPosition()));
 }
 
 /** Aplica rotacao automatica no eixo ativo da malha selecionada. */
