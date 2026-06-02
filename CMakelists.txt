@@ -50,6 +50,7 @@ set(EXERCISES
     Vivencial
     Texturas
     PhongTexturas
+    PhongTexturasCamera
 )
 
 add_compile_options(-Wno-pragmas)
