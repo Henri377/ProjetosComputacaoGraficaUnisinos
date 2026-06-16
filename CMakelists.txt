@@ -51,6 +51,7 @@ set(EXERCISES
     Texturas
     PhongTexturas
     PhongTexturasCamera
+    CurvasParametricas
 )
 
 add_compile_options(-Wno-pragmas)

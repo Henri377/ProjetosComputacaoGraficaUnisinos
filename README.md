@@ -45,3 +45,86 @@ Após a geração, extraia os arquivos baixados e coloque-os nos diretórios cor
 
 🚨 **Sem esses arquivos, a compilação falhará!** É necessário colocar esses arquivos nos diretórios corretos, conforme a orientação acima.
 
+---
+
+## 🗂️ Exemplos disponíveis
+
+| Executável | Arquivo | Descrição |
+|---|---|---|
+| `Hello3D` | `Hello3D.cpp` | Renderização básica com OpenGL |
+| `TriangleTex` | `TriangleTex.cpp` | Triângulo com textura |
+| `SpherePhong` | `SpherePhong.cpp` | Esfera com iluminação Phong |
+| `Vivencial` | `Vivencial.cpp` | Cena com múltiplos OBJs e transformações |
+| `Texturas` | `Texturas.cpp` | Carregamento e aplicação de texturas |
+| `PhongTexturas` | `PhongTexturas.cpp` | Phong + texturas |
+| `PhongTexturasCamera` | `PhongTexturasCamera.cpp` | Phong + texturas + câmera FPS livre |
+| `CurvasParametricas` | `CurvasParametricas.cpp` | Trajetórias paramétricas cíclicas para objetos 3D |
+
+---
+
+## 🎯 CurvasParametricas — Trajetórias Paramétricas
+
+Baseado em `PhongTexturasCamera`, adiciona um sistema de **trajetórias cíclicas** para cada objeto da cena. Os pontos de controle são gravados interativamente via teclado (ou carregados de arquivo) e o objeto percorre os pontos em loop com **interpolação linear (LERP)**.
+
+### Como funciona
+
+Cada objeto possui uma `Trajectory` com:
+- Uma lista de pontos de controle `(x, y, z)`
+- Um parâmetro `t ∈ [0, 1)` que percorre o segmento atual
+- Ao atingir o último ponto, retorna automaticamente ao primeiro (**comportamento cíclico**)
+
+A posição interpolada usa `glm::mix(P_i, P_{i+1}, t)`.
+
+### Controles
+
+| Tecla | Ação |
+|---|---|
+| `1` / `2` | Seleciona objeto (Suzanne / Cubo) |
+| `F` | Adiciona a posição atual do objeto como novo ponto de controle |
+| `T` | Ativa / desativa a animação de trajetória do objeto selecionado |
+| `C` | **Reinicia** — apaga todos os pontos e para o movimento |
+| `M` | Salva a trajetória em `assets/trajetoria_N.txt` |
+| Setas | Move o objeto (X/Y) — apenas com trajetória inativa |
+| `PgUp` / `PgDn` | Move o objeto (Z) — apenas com trajetória inativa |
+| `+` / `-` (numpad) | Escala uniforme |
+| `X` / `Y` / `Z` | Rotação automática no eixo escolhido |
+| `WASD` | Move a câmera (FPS) |
+| Mouse | Orienta a câmera |
+| Scroll | Zoom (altera FOV) |
+| `ESC` | Sai |
+
+### Como testar
+
+```bash
+cd build
+cmake --build . --target CurvasParametricas
+./CurvasParametricas      # Linux/Mac
+CurvasParametricas.exe    # Windows
+```
+
+**Fluxo básico:**
+
+1. Pressione `1` para selecionar a Suzanne
+2. Use as **setas** para posicioná-la em um ponto desejado
+3. Pressione `F` para gravar o ponto
+4. Mova para outra posição e pressione `F` novamente (repita para quantos pontos quiser)
+5. Pressione `T` para ativar a trajetória — o objeto começa a se mover em ciclo
+6. Pressione `M` para salvar os pontos (serão recarregados na próxima execução)
+7. Pressione `C` para reiniciar os pontos e redefinir a trajetória
+
+### Arquivo de trajetória
+
+Formato simples — uma posição `x y z` por linha; linhas com `#` são ignoradas:
+
+```
+# trajetoria_0.txt — Suzanne
+-0.8  0.0  0.0
+ 0.0  0.8  0.0
+ 0.8  0.0  0.0
+ 0.0 -0.8  0.0
+```
+
+Arquivos salvos em:
+- `assets/trajetoria_0.txt` — Suzanne
+- `assets/trajetoria_1.txt` — Cubo
+
