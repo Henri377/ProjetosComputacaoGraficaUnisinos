@@ -55,9 +55,22 @@ endif()
 
 add_executable(VisualizadorCenas
     src/main.cpp
+    src/rendering/Texture2D.cpp
+    src/rendering/Shader.cpp
+    src/scene/Trajectory.cpp
+    src/scene/SceneObject.cpp
+    src/scene/SceneParser.cpp
+    src/loaders/OBJLoader.cpp
+    src/input/InputHandler.cpp
     ${GLAD_C}
 )
 target_include_directories(VisualizadorCenas PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/camera
+    ${CMAKE_SOURCE_DIR}/src/rendering
+    ${CMAKE_SOURCE_DIR}/src/scene
+    ${CMAKE_SOURCE_DIR}/src/loaders
+    ${CMAKE_SOURCE_DIR}/src/input
     ${CMAKE_SOURCE_DIR}/include/glad
     ${glm_SOURCE_DIR}
     ${stb_image_SOURCE_DIR}
