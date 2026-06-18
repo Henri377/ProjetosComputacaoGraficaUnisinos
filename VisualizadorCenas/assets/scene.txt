@@ -1,0 +1,60 @@
+# ============================================================
+# Arquivo de configuracao de cena - Visualizador 3D
+# ============================================================
+# Formato:
+#   [camera]  - posicao e orientacao inicial da camera
+#   [light]   - fonte de luz (pode haver multiplas secoes)
+#   [object]  - objeto 3D a instanciar (pode haver multiplas secoes)
+#
+# Comentarios comecam com '#'
+# Caminhos de arquivos sao relativos a esta pasta (assets/)
+# ============================================================
+
+[camera]
+position  0.0  1.0  5.0
+yaw      -90.0
+pitch    -10.0
+fov       45.0
+near       0.1
+far      100.0
+
+# ---- Fonte de luz principal -------------------------------------------------
+
+[light]
+position   2.0  4.0  5.0
+color      1.0  1.0  1.0
+intensity  1.0
+
+# ---- Fonte de luz de preenchimento (fill light) - tecla ] ------------------
+
+[light]
+position  -3.0  1.0  2.0
+color      0.4  0.4  0.6
+intensity  0.4
+
+# ---- Contra-luz (back light) - tecla \ -------------------------------------
+
+[light]
+position   0.0  2.0 -4.0
+color      0.6  0.3  0.8
+intensity  0.6
+
+# ---- Objetos da cena -------------------------------------------------------
+
+[object]
+name       Suzanne
+file       Modelos3D/Suzanne.obj
+position  -0.5  0.0  0.0
+scale      0.6  0.6  0.6
+rotation   0.0 180.0  0.0
+trajectory trajetoria_suzanne.txt
+trajspeed  0.8
+
+[object]
+name       Cubo
+file       Modelos3D/Cube.obj
+position   2.5  0.0  0.0
+scale      0.6  0.6  0.6
+rotation   0.0  0.0  0.0
+trajectory trajetoria_cubo.txt
+trajspeed  1.0
