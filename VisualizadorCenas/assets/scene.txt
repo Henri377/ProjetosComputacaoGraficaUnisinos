@@ -42,19 +42,19 @@ intensity  0.6
 # ---- Objetos da cena -------------------------------------------------------
 
 [object]
-name       Suzanne
-file       Modelos3D/Suzanne.obj
-position  -0.5  0.0  0.0
-scale      0.6  0.6  0.6
+name       Skater
+file       Modelos3D/Skater.obj
+position   0.0  0.0  0.0
+scale      0.1  0.1  0.1
 rotation   0.0 180.0  0.0
-trajectory trajetoria_suzanne.txt
-trajspeed  0.8
+trajectory trajetoria_skater.txt
+trajspeed  0.6
 
 [object]
-name       Cubo
-file       Modelos3D/Cube.obj
-position   2.5  0.0  0.0
-scale      0.6  0.6  0.6
+name       Ball
+file       Modelos3D/Ball.obj
+position   3.5  0.0  0.0
+scale      0.04  0.04  0.04
 rotation   0.0  0.0  0.0
-trajectory trajetoria_cubo.txt
-trajspeed  1.0
+trajectory trajetoria_ball.txt
+trajspeed  0.8
