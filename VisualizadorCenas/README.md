@@ -167,3 +167,9 @@ VisualizadorCenas/
 | GLAD | local | Loader de funções GL |
 
 Todas baixadas automaticamente pelo CMake, exceto GLAD (inclusa no repositório).
+
+
+Assets:
+
+https://www.turbosquid.com/3d-models/stylized-roller-skates-model-2559716
+https://www.turbosquid.com/3d-models/vintage-leather-ball-model-2547363
